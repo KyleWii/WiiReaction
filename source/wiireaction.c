@@ -7,7 +7,9 @@
 #include <wchar.h>
 #include <locale.h>
 #include <time.h>
+#include <asndlib.h>
 
+#include "click_sound.h"
 #include "NotoSansJP_Regular_ttf.h"
 
 typedef enum {
@@ -19,78 +21,92 @@ typedef enum {
 	STATE_TOO_EARLY
 } GameState;
 
-void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar_t result_text[], wchar_t highscore_text[], int highscore, int colorchange_toggle, int darkorlight_toggle) {
-	if (state == STATE_TITLE) {
-		if (darkorlight_toggle == 0) {
-			GRRLIB_FillScreen(RGBA(45, 45, 45, 255));
-			GRRLIB_PrintfTTFW(140, 180, font, L"WiiReaction", 40, RGBA (255, 255, 255, 255));
-			GRRLIB_PrintfTTFW(140, 240, font, L"Press ⊕ to start the game.", 18, RGBA (255, 255, 255, 255));
-			GRRLIB_PrintfTTFW(140, 280, font, L"Press ⊖ to go to settings.", 18, RGBA (255, 255, 255, 255));
-		} else {
-			GRRLIB_FillScreen(RGBA(235, 235, 235, 255));
-			GRRLIB_PrintfTTFW(140, 180, font, L"WiiReaction", 40, RGBA (0, 0, 0, 255));
-			GRRLIB_PrintfTTFW(140, 240, font, L"Press ⊕ to start the game.", 18, RGBA (0, 0, 0, 255));
-			GRRLIB_PrintfTTFW(140, 280, font, L"Press ⊖ to go to settings.", 18, RGBA (0, 0, 0, 255));
-		}
-	} else if (state == STATE_SETTINGS) {
-		if (darkorlight_toggle == 0) {
-			GRRLIB_FillScreen(RGBA(45, 45, 45, 255));
-			if (colorchange_toggle == 0) {
-				GRRLIB_PrintfTTFW(140, 180, font, L"Press ① to toggle changing color. It is currently off.", 16, RGBA(255, 255, 255, 255));
-			} else {
-				GRRLIB_PrintfTTFW(140, 180, font, L"Press ① to toggle changing color. It is currently on.", 16, RGBA(255, 255, 255, 255));
-			}
-			if (darkorlight_toggle == 0) {
-				GRRLIB_PrintfTTFW(140, 240, font, L"Press ② to toggle light/dark theme. The theme is currently dark.", 16, RGBA(255, 255, 255, 255));
-			} else {
-				GRRLIB_PrintfTTFW(140, 240, font, L"Press ② to toggle light/dark theme. The theme is currently light.", 16, RGBA(255, 255, 255, 255));
-			}
-			GRRLIB_PrintfTTFW(140, 300, font, L"Press Ⓑ to go back to the title screen.", 20, RGBA(255, 255, 255, 255));
-		} else {
-			GRRLIB_FillScreen(RGBA(235, 235, 235, 255));
-			if (colorchange_toggle == 0) {
-				GRRLIB_PrintfTTFW(140, 180, font, L"Press ① to toggle changing color. It is currently off.", 16, RGBA(0, 0, 0, 255));
-			} else {
-				GRRLIB_PrintfTTFW(140, 180, font, L"Press ① to toggle changing color. It is currently on.", 16, RGBA(0, 0, 0, 255));
-			}
-			if (darkorlight_toggle == 0) {
-				GRRLIB_PrintfTTFW(140, 240, font, L"Press ② to toggle light/dark theme. The theme is currently dark.", 16, RGBA(0, 0, 0, 255));
-			} else {
-				GRRLIB_PrintfTTFW(140, 240, font, L"Press ② to toggle light/dark theme. The theme is currently light.", 16, RGBA(0, 0, 0, 255));
-			}
-			GRRLIB_PrintfTTFW(140, 300, font, L"Press Ⓑ to go back to the title screen.", 20, RGBA(0, 0, 0, 255));
-		}
+void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar_t result_text[], wchar_t highscore_text[], int highscore, int colorchange_toggle, int darkorlight_toggle, int sound_toggle) {
+	u32 bg_color;
+	u32 title_color;
+	u32 main_text_color;
+	u32 sub_text_color;
+
+	if (darkorlight_toggle == 0) {
+		title_color = RGBA(255, 255, 255, 255);
+		main_text_color = RGBA(255, 255, 0, 255);
+		sub_text_color = RGBA(180, 180, 180, 255);
 	} else {
-		if (darkorlight_toggle == 0) {
-			if (colorchange_toggle == 0 || state != STATE_GO) {
-				GRRLIB_FillScreen(RGBA(20, 20, 30, 255));
-			} else {
-				GRRLIB_FillScreen(RGBA(90, 255, 90, 120));
-			}
-			GRRLIB_PrintfTTFW(30, 30, font, L"WiiReaction", 36, RGBA(255, 255, 255, 255));
-			GRRLIB_PrintfTTFW(140, 180, font, message, 28, RGBA(255, 255, 0, 255));
-			GRRLIB_PrintfTTFW(120, 250, font, result_text, 24, RGBA(200, 200, 200, 255));
-
-			GRRLIB_PrintfTTFW(80, 400, font, L"Ⓐ = React   Ⓑ = Restart   HOME = Quit", 20, RGBA(180, 180, 180, 255));
-			if (highscore != 0) {
-				GRRLIB_PrintfTTFW(80, 450, font, highscore_text, 24, RGBA(180, 180, 180, 255));
-			}
-		} else {
-			if (colorchange_toggle == 0 || state != STATE_GO) {
-				GRRLIB_FillScreen(RGBA(245, 245, 245, 255));
-			} else {
-				GRRLIB_FillScreen(RGBA(140, 255, 140, 255));
-			}
-			GRRLIB_PrintfTTFW(30, 30, font, L"WiiReaction", 36, RGBA(0, 0, 0, 255));
-			GRRLIB_PrintfTTFW(140, 180, font, message, 28, RGBA(0, 0, 255, 255));
-			GRRLIB_PrintfTTFW(120, 250, font, result_text, 24, RGBA(50, 50, 50, 255));
-
-			GRRLIB_PrintfTTFW(80, 400, font, L"Ⓐ = React   Ⓑ = Restart   HOME = Quit", 20, RGBA(90, 90, 90, 255));
-			if (highscore != 0) {
-				GRRLIB_PrintfTTFW(80, 450, font, highscore_text, 24, RGBA(90, 90, 90, 255));
-			}
-		}
+		title_color = RGBA(0, 0, 0, 255);
+		main_text_color = RGBA(0, 0, 255, 255);
+		sub_text_color = RGBA(90, 90, 90, 255);
 	}
+
+	switch (state) {
+		case STATE_TITLE:
+			bg_color = (darkorlight_toggle == 0) ? RGBA(45, 45, 45, 255) : RGBA(235, 235, 235, 255);
+			GRRLIB_FillScreen(bg_color);
+			GRRLIB_PrintfTTFW(140, 180, font, L"WiiReaction", 40, title_color);
+			GRRLIB_PrintfTTFW(140, 240, font, L"Press ⊕ to start the game.", 18, title_color);
+			GRRLIB_PrintfTTFW(140, 280, font, L"Press ⊖ to go to settings.", 18, title_color);
+			break;
+
+		case STATE_SETTINGS:
+			bg_color = (darkorlight_toggle == 0) ? RGBA(45, 45, 45, 255) : RGBA(235, 235, 235, 255);
+			GRRLIB_FillScreen(bg_color);
+
+			GRRLIB_PrintfTTFW(
+				140, 180, font,
+				colorchange_toggle == 0
+				? L"Press ① to toggle changing color. It is currently off."
+				: L"Press ① to toggle changing color. It is currently on.",
+				16, title_color
+			);
+
+			GRRLIB_PrintfTTFW(
+				140, 240, font,
+				darkorlight_toggle == 0
+				? L"Press ② to toggle light/dark theme. The theme is currently dark."
+				: L"Press ② to toggle light/dark theme. The theme is currently light.",
+				16, title_color
+			);
+
+			GRRLIB_PrintfTTFW(
+				140, 300, font,
+				sound_toggle == 0
+				? L"Press Ⓐ to toggle sound. Sound is currently on."
+				: L"Press Ⓐ to toggle sound. Sound is currently off.",
+				16, title_color
+			);
+
+			GRRLIB_PrintfTTFW(140, 360, font, L"Press Ⓑ to go back to the title screen.", 20, title_color);
+			break;
+
+		default:
+			if (colorchange_toggle == 1 && state == STATE_GO) {
+				bg_color = (darkorlight_toggle == 0)
+				? RGBA(90, 255, 90, 120)
+				: RGBA(140, 255, 140, 255);
+			} else {
+				bg_color = (darkorlight_toggle == 0)
+				? RGBA(20, 20, 30, 255)
+				: RGBA(245, 245, 245, 255);
+			}
+
+			GRRLIB_FillScreen(bg_color);
+			GRRLIB_PrintfTTFW(30, 30, font, L"WiiReaction", 36, title_color);
+			GRRLIB_PrintfTTFW(140, 180, font, message, 28, main_text_color);
+
+			GRRLIB_PrintfTTFW(
+				120, 250, font, result_text, 24,
+				(darkorlight_toggle == 0)
+				? RGBA(200, 200, 200, 255)
+				: RGBA(50, 50, 50, 255)
+			);
+
+			GRRLIB_PrintfTTFW(80, 400, font, L"Ⓐ = React   Ⓑ = Restart   (⌂) = Quit", 20, sub_text_color);
+
+			if (highscore != 0) {
+				GRRLIB_PrintfTTFW(80, 450, font, highscore_text, 24, sub_text_color);
+			}
+			break;
+	}
+
 	GRRLIB_Render();
 }
 
@@ -121,13 +137,16 @@ int main(int argc, char **argv) {
 	int colorchange_toggle = 0;
 	// 0 = Dark, 1 = Light
 	int darkorlight_toggle = 0;
+	// 0 = On, 1 = Off
+	int sound_toggle = 0;
 
 	// Init video/input/GRRLIB
 	VIDEO_Init();
 	WPAD_Init();
 	WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_0, 640, 480);
-
+	ASND_Init();
+	ASND_Pause(0);
 	GRRLIB_Init();
 
 	// Font
@@ -156,6 +175,9 @@ int main(int argc, char **argv) {
 		if (state == STATE_TITLE) {
 			if (pressed & WPAD_BUTTON_PLUS) {
 				reset_round(&state, &random_wait_ms, &wait_start_ticks);
+				if (sound_toggle == 0) {
+					ASND_SetVoice(0, VOICE_STEREO_16BIT, 44100, 0, click_wav + 44, click_wav_len - 44, 255, 255, NULL);
+				}
 				continue;
 			}
 			if (pressed & WPAD_BUTTON_MINUS) {
@@ -165,18 +187,13 @@ int main(int argc, char **argv) {
 
 		if (state == STATE_SETTINGS) {
 			if (pressed & WPAD_BUTTON_1) {
-				if (colorchange_toggle == 0) {
-					colorchange_toggle = 1;
-				} else {
-					colorchange_toggle = 0;
-				}
+				colorchange_toggle = !colorchange_toggle;
 			}
 			if (pressed & WPAD_BUTTON_2) {
-				if (darkorlight_toggle == 0) {
-					darkorlight_toggle = 1;
-				} else {
-					darkorlight_toggle = 0;
-				}
+				darkorlight_toggle = !darkorlight_toggle;
+			}
+			if (pressed & WPAD_BUTTON_A) {
+				sound_toggle = !sound_toggle;
 			}
 			if (pressed & WPAD_BUTTON_B) {
 				state = STATE_TITLE;
@@ -226,7 +243,7 @@ int main(int argc, char **argv) {
 			}
 		}
 
-		draw_screen(state, font, message, result_text, highscore_text, highscore, colorchange_toggle, darkorlight_toggle);
+		draw_screen(state, font, message, result_text, highscore_text, highscore, colorchange_toggle, darkorlight_toggle, sound_toggle);
 	}
 
 	GRRLIB_FreeTTF(font);
