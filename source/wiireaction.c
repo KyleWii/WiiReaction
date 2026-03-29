@@ -15,13 +15,14 @@
 typedef enum {
 	STATE_TITLE,
 	STATE_SETTINGS,
+	STATE_STATS,
 	STATE_WAITING,
 	STATE_GO,
 	STATE_RESULT,
 	STATE_TOO_EARLY
 } GameState;
 
-void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar_t result_text[], wchar_t highscore_text[], int highscore, int colorchange_toggle, int darkorlight_toggle, int sound_toggle) {
+void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar_t result_text[], wchar_t highscore_text[], wchar_t statsbox1[], wchar_t statsbox2[], wchar_t statsbox3[], int highscore, int colorchange_toggle, int darkorlight_toggle, int sound_toggle) {
 	u32 bg_color;
 	u32 title_color;
 	u32 main_text_color;
@@ -77,6 +78,14 @@ void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar
 			GRRLIB_PrintfTTFW(140, 360, font, L"Press Ⓑ to go back to the title screen.", 20, title_color);
 			break;
 
+		case STATE_STATS:
+			bg_color = (darkorlight_toggle == 0) ? RGBA(45, 45, 45, 255) : RGBA(235, 235, 235, 255);
+			GRRLIB_FillScreen(bg_color);
+			GRRLIB_PrintfTTFW(140, 180, font, statsbox1, 40, title_color);
+			GRRLIB_PrintfTTFW(140, 240, font, statsbox2, 18, title_color);
+			GRRLIB_PrintfTTFW(140, 280, font, statsbox3, 18, title_color);
+			break;
+
 		default:
 			if (colorchange_toggle == 1 && state == STATE_GO) {
 				bg_color = (darkorlight_toggle == 0)
@@ -99,7 +108,7 @@ void draw_screen(GameState state, GRRLIB_ttfFont *font, wchar_t message[], wchar
 				: RGBA(50, 50, 50, 255)
 			);
 
-			GRRLIB_PrintfTTFW(80, 400, font, L"Ⓐ = React   Ⓑ = Restart   (⌂) = Quit", 20, sub_text_color);
+			GRRLIB_PrintfTTFW(80, 400, font, L"Ⓐ = React   Ⓑ = Restart   ⊕ = Stats   (⌂) = Quit", 20, sub_text_color);
 
 			if (highscore != 0) {
 				GRRLIB_PrintfTTFW(80, 450, font, highscore_text, 24, sub_text_color);
@@ -128,10 +137,15 @@ int main(int argc, char **argv) {
 	int random_wait_ms = 0;
 	int reaction_ms = 0;
 	int highscore = 0;
+	int false_starts = 0;
+	int successful_rounds_done = 0;
 
 	wchar_t message[128];
 	wchar_t result_text[128];
 	wchar_t highscore_text[128];
+	wchar_t statsbox1[128];
+	wchar_t statsbox2[128];
+	wchar_t statsbox3[128];
 
 	// 0 = Off, 1 = On
 	int colorchange_toggle = 0;
@@ -200,6 +214,14 @@ int main(int argc, char **argv) {
 			}
 		}
 
+		if (state == STATE_STATS) {
+			swprintf(statsbox1, 128, L"Highscore: %d", highscore);
+			swprintf(statsbox2, 128, L"False starts: %d", false_starts);
+			swprintf(statsbox3, 128, L"Successful rounds done: %d", successful_rounds_done);
+			if (pressed & WPAD_BUTTON_B) {
+				state = STATE_TITLE;
+			}
+		}
 		if (state == STATE_WAITING) {
 			swprintf(message, 128, L"Wait for it...");
 			swprintf(result_text, 128, L"Don't press Ⓐ yet!");
@@ -229,10 +251,24 @@ int main(int argc, char **argv) {
 			}
 		}
 		else if (state == STATE_RESULT) {
-			swprintf(message, 128, L"Good job!");
+			if (reaction_ms <= 200) {
+				swprintf(message, 128, L"Amazing job!");
+			} else if (reaction_ms <= 250) {
+				swprintf(message, 128, L"Great job!");
+			} else if (reaction_ms <= 333) {
+				swprintf(message, 128, L"Good job!");
+			} else if (reaction_ms <= 400) {
+				swprintf(message, 128, L"Ehhh...");
+			} else {
+				swprintf(message, 128, L"Were you paying attention?");
+			}
 			swprintf(result_text, 128, L"Reaction time: %d ms", reaction_ms);
 			if (pressed & WPAD_BUTTON_B) {
 				reset_round(&state, &random_wait_ms, &wait_start_ticks);
+				successful_rounds_done++;
+			}
+			if (pressed & WPAD_BUTTON_PLUS) {
+				state = STATE_STATS;
 			}
 		}
 		else if (state == STATE_TOO_EARLY) {
@@ -240,10 +276,14 @@ int main(int argc, char **argv) {
 			swprintf(result_text, 128, L"Press Ⓑ to try again");
 			if (pressed & WPAD_BUTTON_B) {
 				reset_round(&state, &random_wait_ms, &wait_start_ticks);
+				false_starts++;
+			}
+			if (pressed & WPAD_BUTTON_PLUS) {
+				state = STATE_STATS;
 			}
 		}
 
-		draw_screen(state, font, message, result_text, highscore_text, highscore, colorchange_toggle, darkorlight_toggle, sound_toggle);
+		draw_screen(state, font, message, result_text, highscore_text, statsbox1, statsbox2, statsbox3, highscore, colorchange_toggle, darkorlight_toggle, sound_toggle);
 	}
 
 	GRRLIB_FreeTTF(font);
